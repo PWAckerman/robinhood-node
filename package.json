@@ -27,6 +27,8 @@
     "should": "^4.3.0"
   },
   "dependencies": {
+    "jsdoc": "^3.4.0",
+    "q": "^1.4.1",
     "request": "2.69.0"
   }
 }

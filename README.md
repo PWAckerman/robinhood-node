@@ -1,192 +1,81 @@
+# Robinhood API NodeJS Wrapper
+
+**Forked And Extended By**: Patrick W. Ackerman
+**Original Author:** Alejandro U. Alvarez
+**License**: AGPLv3 - See LICENSE file for more details
 <h1><img src="https://raw.githubusercontent.com/aurbano/robinhood-node/master/.github/robinhood-node.png"/></h1>
 
-[![Travis](https://img.shields.io/travis/aurbano/robinhood-node.svg?style=flat-square)](https://travis-ci.org/aurbano/robinhood-node)
-[![npm](https://img.shields.io/npm/v/robinhood.svg?style=flat-square)](https://www.npmjs.com/package/robinhood)
-[![David](https://img.shields.io/david/aurbano/Robinhood-Node.svg?style=flat-square)](https://david-dm.org/aurbano/robinhood-node)
+This is a fork of Alejandro A. Alvarez's project to make trades with the private [Robinhood](https://www.robinhood.com/) API. I have promisified many of the methods (using the Q library) to avoid race conditions with some of the asynchronous callbacks in the original. In addition, much of the code has been altered to use ES6 WeakMaps for private variables, rather than the simply preceding underscores to denote intended data hiding. I have also added some additional endpoints that were not covered in the original library.
 
-NodeJS Framework to make trades with the private [Robinhood](https://www.robinhood.com/) API. Using this API is not encouraged, since it's not officially available and it has been reverse engineered. See this [blog post](https://medium.com/@rohanpai25/reversing-robinhood-free-accessible-automated-stock-trading-f40fba1e7d8b) for more information on the API.
+As with the original, using this API is not encouraged, since it's not officially available and it has been reverse engineered. See this [blog post](https://medium.com/@rohanpai25/reversing-robinhood-free-accessible-automated-stock-trading-f40fba1e7d8b) for more information on Alejandro A. Alvarez's original API wrapper library.
 
-I have read [Robinhood's Terms and Conditions](https://brokerage-static.s3.amazonaws.com/assets/robinhood/legal/Robinhood%20Terms%20and%20Conditions.pdf) and, without being a lawyer and/or this being valid in any way, it doesn't seem like interacting with their servers using the API is against them.
+It is Alejandro's opinion after having read the Robinhood Terms of Service [Robinhood's Terms and Conditions](https://brokerage-static.s3.amazonaws.com/assets/robinhood/legal/Robinhood%20Terms%20and%20Conditions.pdf) that interacting with their servers using the API is not prohibited.
 
-> This framework was inspired by a deprecated Python framework originally developed by [@Rohanpai](https://github.com/rohanpai).
+> Alejandro's original framework was inspired by a deprecated Python framework originally developed by [@Rohanpai](https://github.com/rohanpai).
 
-## Features
+## Classes
 
-* Placing buy orders `Robinhood.place_buy_order`
-* Placing sell order `Robinhood.place_sell_order`
-* Quote Information `Robinhood.quote_data`
-* Get Dividend information `Robinhood.dividends (v0.2+)`
-* Get User information `Robinhood.user (v0.2+)`
-* Get Orders `Robinhood.orders (v0.2+)`
-* _More coming soon..._
+<dl>
+<dt><a href="#RobinhoodWebApi">RobinhoodWebApi</a></dt>
+<dd><p>Class representing the RobinhoodWepApi object for interacting with the API.</p>
+</dd>
+</dl>
 
-## Installation
+<a name="RobinhoodWebApi"></a>
 
-```bash
-$ npm install --save robinhood
-```
+## RobinhoodWebApi
+This documentation is not exhaustive and will be added to periodically.
 
-## Usage
+Class representing the RobinhoodWepApi object for interacting with the API.
 
-```js
-var Robinhood = require('robinhood');
+**Kind**: global class
 
-Robinhood(null).quote_data('GOOG', function(error, response, body) {
-    if (error) {
-        console.error(error);
-        process.exit(1);
-    }
+* [RobinhoodWebApi](#RobinhoodWebApi)
+    * [new RobinhoodWebApi(opts)](#new_RobinhoodWebApi_new)
+    * [.login()](#RobinhoodWebApi+login) ⇒ <code>Promise.&lt;string&gt;</code>
+    * [.user()](#RobinhoodWebApi+user) ⇒ <code>Promise.&lt;object&gt;</code>
+    * [.orders()](#RobinhoodWebApi+orders) ⇒ <code>Promise.&lt;array&gt;</code>
 
-    console.log(body);
-});
-```
+<a name="new_RobinhoodWebApi_new"></a>
 
-## API
+### new RobinhoodWebApi(opts)
+Create an instance of the class. The constructor sets headers, endpoints, and private variables.
 
-Before using these methods, make sure you have initialized Robinhood using the snippet above.
 
-*Feel free to send a pull request expanding this with examples or info about the return objects*
+| Param | Type | Description |
+| --- | --- | --- |
+| opts | <code>object</code> | an object with username and password fields. |
 
-### `investment_profile(callback)`
+<a name="RobinhoodWebApi+login"></a>
 
-Get the current user's investment profile.
+### robinhoodWebApi.login() ⇒ <code>Promise.&lt;string&gt;</code>
+Logs the user into Robinhood based on the provided details in the constructor, and stores that value as the 'session' within the object (only one session at a time per RobinhoodWebApi instance). Returns a Promise.
 
-### `instruments(stock, callback)`
+**Kind**: instance method of <code>[RobinhoodWebApi](#RobinhoodWebApi)</code>
+**Returns**: <code>Promise.&lt;string&gt;</code> - token
+**Promise**:
+<a name="RobinhoodWebApi+user"></a>
 
-Get the user's instruments for a specified stock.
+### robinhoodWebApi.user() ⇒ <code>Promise.&lt;object&gt;</code>
+Can only be called once a user has been logged in. Gathers the details about a specific user as stored by the Robinhood API. Returns a promise.
 
-### `quote_data(stock, callback) // Not authenticated`
+**Kind**: instance method of <code>[RobinhoodWebApi](#RobinhoodWebApi)</code>
+**Returns**: <code>Promise.&lt;object&gt;</code> - user details
+**Promise**:
+<a name="RobinhoodWebApi+orders"></a>
 
-Get the user's quote data for a specified stock.
+### robinhoodWebApi.orders() ⇒ <code>Promise.&lt;array&gt;</code>
+Gathers the orders that are currently in place for the selected user. Returns a Promise.
 
-Return message: (passed to the callback)
+**Kind**: instance method of <code>[RobinhoodWebApi](#RobinhoodWebApi)</code>
+**Returns**: <code>Promise.&lt;array&gt;</code> - order details
+**Promise**:
+<a name="Promise"></a>
 
-```js
-{
-    results: [
-        {
-            ask_price: String, // Float number in a String, e.g. '735.7800'
-            ask_size: Number, // Integer
-            bid_price: String, // Float number in a String, e.g. '731.5000'
-            bid_size: Number, // Integer
-            last_trade_price: String, // Float number in a String, e.g. '726.3900'
-            last_extended_hours_trade_price: String, // Float number in a String, e.g. '735.7500'
-            previous_close: String, // Float number in a String, e.g. '743.6200'
-            adjusted_previous_close: String, // Float number in a String, e.g. '743.6200'
-            previous_close_date: String, // YYYY-MM-DD e.g. '2016-01-06'
-            symbol: String, // e.g. 'GOOG'
-            trading_halted: Boolean, 
-            updated_at: String, // YYYY-MM-DDTHH:MM:SS e.g. '2016-01-07T21:00:00Z'
-        }
-    ]
-}
-```
+# This Fork Managed By
+* Patrick W. Ackerman ([@pwackerman](https://github.com/pwackerman))
 
-### `accounts(callback)`
-
-Get the user's accounts.
-
-### `user(callback)`
-
-Get the user information.
-
-### `dividends(callback)`
-
-Get the user's dividends information.
-
-### `orders(callback)`
-
-Get the user's orders information.
-
-### `place_buy_order(options, callback)`
-
-Place a buy order on a specified stock.
-
-Options must contain:
-
-```js
-{
-    bid_price: Number,
-    quantity: Number,
-    instrument: {
-        url: String,
-        symbol: String
-    },
-    // Optional:
-    trigger: String, // Defaults to "gfd" (Good For Day)
-    time: String,    // Defaults to "immediate"
-    type: String     // Defaults to "market"
-}
-```
-
-For the Optional ones, the values can be:
-
-*[Disclaimer: This is an unofficial API based on reverse engineering, and the following option values have not been confirmed]*
-
-#### `trigger`
-
-A *[trade trigger](http://www.investopedia.com/terms/t/trade-trigger.asp)* is usually a market condition, such as a rise or fall in the price of an index or security.
-
-Values can be:
-
-* `gfd`: Good For Day
-* `gtc`: Good Till Cancelled
-* `oco`: Order Cancels Other
-
-#### `time`
-
-The *[time in force](http://www.investopedia.com/terms/t/timeinforce.asp?layout=infini&v=3A)* for an order defines the length of time over which an order will continue working before it is canceled.
-
-Values can be:
-
-* `immediate` : The order will be cancelled unless it is fulfilled immediately.
-* `day` : The order will be cancelled at the end of the trading day.
-
-### `place_sell_order(options, callback)`
-
-Place a sell order on a specified stock.
-
-Options must contain:
-
-```js
-{
-    bid_price: Number,
-    quantity: Number,
-    instrument: {
-        url: String,
-        symbol: String
-    },
-    // Optional:
-    trigger: String, // Defaults to "gfd" (Good For Day)
-    time: String,    // Defaults to "immediate"
-    type: String     // Defaults to "market"
-}
-```
-
-For the Optional ones, the values can be:
-
-*[Disclaimer: This is an unofficial API based on reverse engineering, and the following option values have not been confirmed]*
-
-#### `trigger`
-
-A *[trade trigger](http://www.investopedia.com/terms/t/trade-trigger.asp)* is usually a market condition, such as a rise or fall in the price of an index or security.
-
-Values can be:
-
-* `gfd`: Good For Day
-* `gtc`: Good Till Cancelled
-* `oco`: Order Cancels Other
-
-#### `time`
-
-The *[time in force](http://www.investopedia.com/terms/t/timeinforce.asp?layout=infini&v=3A)* for an order defines the length of time over which an order will continue working before it is canceled.
-
-Values can be:
-
-* `immediate` : The order will be cancelled unless it is fulfilled immediately.
-* `day` : The order will be cancelled at the end of the trading day.
-
-# Contributors
+# Original Contributors
 
 * Alejandro U. Alvarez ([@aurbano](https://github.com/aurbano))
 * Wei-Sheng Su ([@ted7726](https://github.com/ted7726))
@@ -198,8 +87,6 @@ Values can be:
 * Chris Busse ([@busse](https://github.com/busse))
 
 ------------------
-This framework is still in a very alpha version and will likely change, so production usage is completely discouraged.
+Like the original, this framework is still in a very alpha version and will likely change, so production usage is completely discouraged.
 
->Even though this should be obvious: I am not affiliated in any way with Robinhood Financial LLC. I don't mean any harm or disruption in their service by providing this. Furthermore, I believe they are working on an amazing product, and hope that by publishing this NodeJS framework their users can benefit in even more ways from working with them.
-
-[![Analytics](https://ga-beacon.appspot.com/UA-3181088-16/robinhood/readme)](https://github.com/aurbano)
+>Just like Alejandro, I am not affiliated in any way with Robinhood Financial LLC. No harm or disruption towards their service is inteded by providing this library.

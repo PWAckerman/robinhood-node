@@ -1,190 +1,332 @@
 /**
  * Robinhood API NodeJS Wrapper
  * @author Alejandro U. Alvarez
+ * @forkedandextendedby Patrick W. Ackerman
  * @license AGPLv3 - See LICENSE file for more details
+ * @typedef Promise
  */
 
 'use strict';
 
 // Dependencies
-var request = require('request');
+const request = require('request');
+const q = require('q');
+// Context
+const baseUrl = 'https://api.robinhood.com';
+let _private = new WeakMap();
+let _endpoints = new WeakMap();
+let _request = request.defaults();
 
-function RobinhoodWebApi(opts, callback) {
+let endpoints = {
+        login:  `${baseUrl}/api-token-auth/`,
+        investment_profile: `${baseUrl}/user/investment_profile/`,
+        accounts: `${baseUrl}/accounts/`,
+        ach_iav_auth: `${baseUrl}/ach/iav/auth/`,
+        ach_relationships:  `${baseUrl}/ach/relationships/`,
+        ach_transfers:`${baseUrl}/ach/transfers/`,
+        applications: `${baseUrl}/applications/`,
+        dividends:  `${baseUrl}/dividends/`,
+        edocuments: `${baseUrl}/documents/`,
+        instruments:  `${baseUrl}/instruments/`,
+        margin_upgrade:  `${baseUrl}/margin/upgrades/`,
+        markets:  `${baseUrl}/markets/`,
+        notifications:  `${baseUrl}/notifications/`,
+        orders: `${baseUrl}/orders/`,
+        password_reset: `${baseUrl}/password_reset/request/`,
+        quotes: `${baseUrl}/quotes/`,
+        document_requests:  `${baseUrl}/upload/document_requests/`,
+        user: `${baseUrl}/user/`,
+        watchlists: `${baseUrl}/watchlists/`,
+        positions: `${baseUrl}/positions/`,
+        notes: `${baseUrl}/midlands/notifications/stack/`,
+        movers: `${baseUrl}/midlands/movers/sp500/`
+    }
+//I don't think a lot of these headers are necessary for this to work, though are a holdover from previous package
+    let headers = {
+              'Accept': '*/*',
+              'Accept-Encoding': 'gzip, deflate',
+              'Accept-Language': 'en;q=1, fr;q=0.9, de;q=0.8, ja;q=0.7, nl;q=0.6, it;q=0.5',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+              'X-Robinhood-API-Version': '1.0.0',
+              'Connection': 'keep-alive',
+              'User-Agent': 'Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)'
+          }
 
-  /* +--------------------------------+ *
-   * |      Internal variables        | *
-   * +--------------------------------+ */
-  var _options = opts || {},
-      // Private API Endpoints
-      _endpoints = {
-        login:  'https://api.robinhood.com/api-token-auth/',
-        investment_profile: 'https://api.robinhood.com/user/investment_profile/',
-        accounts: 'https://api.robinhood.com/accounts/',
-        ach_iav_auth: 'https://api.robinhood.com/ach/iav/auth/',
-        ach_relationships:  'https://api.robinhood.com/ach/relationships/',
-        ach_transfers:'https://api.robinhood.com/ach/transfers/',
-        applications: 'https://api.robinhood.com/applications/',
-        dividends:  'https://api.robinhood.com/dividends/',
-        edocuments: 'https://api.robinhood.com/documents/',
-        instruments:  'https://api.robinhood.com/instruments/',
-        margin_upgrade:  'https://api.robinhood.com/margin/upgrades/',
-        markets:  'https://api.robinhood.com/markets/',
-        notifications:  'https://api.robinhood.com/notifications/',
-        orders: 'https://api.robinhood.com/orders/',
-        password_reset: 'https://api.robinhood.com/password_reset/request/',
-        quotes: 'https://api.robinhood.com/quotes/',
-        document_requests:  'https://api.robinhood.com/upload/document_requests/',
-        user: 'https://api.robinhood.com/user/',
-        watchlists: 'https://api.robinhood.com/watchlists/',
-        positions: 'https://api.robinhood.com/positions/'
-    },
-    _isInit = false,
-    _request = request.defaults(),
-    _private = {
-      session : {},
-      account: null,
-      username : null,
-      password : null,
-      headers : null,
-      auth_token : null
-    },
-    api = {};
-
-  function _init(){
-    _private.username = _options.username;
-    _private.password = _options.password;
-    _private.headers = {
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept-Language': 'en;q=1, fr;q=0.9, de;q=0.8, ja;q=0.7, nl;q=0.6, it;q=0.5',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        'X-Robinhood-API-Version': '1.0.0',
-        'Connection': 'keep-alive',
-        'User-Agent': 'Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)'
-    };
-    _setHeaders();
-    _login(function(){
-      _isInit = true;
-
-      if (callback) {
-        callback.call();
-      }
-    });
+/**
+ * Class representing the RobinhoodWepApi object for interacting with the API.
+ */
+class RobinhoodWebApi {
+  /**
+   * Create an instance of the class. The constructor sets headers, endpoints, and private variables.
+   * @constructor
+   * @param {object} opts - an object with username and password fields.
+   */
+  constructor(opts) {
+    opts.headers = headers;
+    _private.set(this, opts);
+    _endpoints.set(this, endpoints);
+    this._setHeaders()
   }
 
-  function _setHeaders(){
+  _setHeaders(){
+    let __private = _private.get(this);
     _request = request.defaults({
-      headers: _private.headers,
+      headers: __private.headers,
       json: true,
       gzip: true
     });
   }
 
-  function _login(callback){
-    _request.post({
-      uri: _endpoints.login,
-      form: {
-        password: _private.password,
-        username: _private.username
-      }
-    }, function(err, httpResponse, body) {
-      if(err) {
-        throw (err);
-      }
-
-      _private.account = body.account;
-      _private.auth_token = body.token;
-      _private.headers.Authorization = 'Token ' + _private.auth_token;
-
-      _setHeaders();
-
-      callback.call();
-    });
-  }
-
-  /* +--------------------------------+ *
-   * |      Define API methods        | *
-   * +--------------------------------+ */
-  api.investment_profile = function(callback){
-    return _request.get({
-        uri: _endpoints.investment_profile
-      }, callback);
-  };
-
-  api.instruments = function(symbol, callback){
-    return _request.get({
-        uri: _endpoints.instruments,
-        qs: {'query': symbol.toUpperCase()}
-      }, callback);
-  };
-
-  api.quote_data = function(symbol, callback){
-    return _request.get({
-        uri: _endpoints.quotes,
-        qs: { 'symbols': symbol.toUpperCase() }
-      }, callback);
-  };
-
-  api.accounts= function(callback){
-    return _request.get({
-      uri: _endpoints.accounts
-    }, callback);
-  };
-
-  api.user = function(callback){
-    return _request.get({
-      uri: _endpoints.user
-    }, callback);
-  };
-
-  api.dividends = function(callback){
-    return _request.get({
-      uri: _endpoints.dividends
-    }, callback);
-  };
-
-  api.orders = function(callback){
-    return _request.get({
-      uri: _endpoints.orders
-    }, callback);
-  };
-  var _place_order = function(options, callback){
-    return _request.post({
-        uri: _endpoints.orders,
+  /**
+   * Logs the user into Robinhood based on the provided details in the constructor, and stores that value as the 'session' within the object (only one session at a time per RobinhoodWebApi instance). Returns a Promise.
+   * @promise
+   * @returns {Promise.<string>} token
+   */
+  login(){
+    let dfd = q.defer();
+    let __endpoints = _endpoints.get(this);
+    let __private = _private.get(this);
+    let self = this;
+      _request.post({
+        uri: __endpoints.login,
         form: {
-          account: _private.account,
-          instrument: options.instrument.url,
-          price: options.bid_price,
-          stop_price: options.stop_price,
-          quantity: options.quantity,
-          side: options.transaction,
-          symbol: options.instrument.symbol.toUpperCase(),
-          time_in_force: options.time || 'gfd',
-          trigger: options.trigger || 'immediate',
-          type: options.type || 'market'
+          password: __private.password,
+          username: __private.username
         }
-      }, callback);
-  };
+      }, (err, httpResponse, body)=>{
+        if(err) {
+          dfd.reject(err);
+        }
+        __private.account = body.account;
+        __private.auth_token = body.token;
+        __private.headers.Authorization = 'Token ' + __private.auth_token;
 
-  api.place_buy_order = function(options, callback){
-    options.transaction = 'buy';
-    return _place_order(options, callback);
-  };
+        console.log('private', __private);
+        _private.set(self, __private);
 
-  api.place_sell_order = function(options, callback){
-    options.transaction = 'sell';
-    return _place_order(options, callback);
-  };
+        self._setHeaders();
 
-  api.positions = function(callback){
-    return _request.get({
-      uri: _endpoints.positions
-    }, callback);
-  };
+        dfd.resolve(body.token)
+      });
+      return dfd.promise;
+    }
+  /**
+   * Can only be called once a user has been logged in. Gathers the details about a specific user as stored by the Robinhood API. Returns a promise.
+   * @promise
+   * @returns {Promise.<object>} user details
+   */
+  user(){
+    let dfd = q.defer();
+    let __endpoints = _endpoints.get(this);
+    _request.get({
+        "uri": __endpoints.user
+      }, (err, httpResponse, body) => {
+        if(err){
+          console.log('err', err)
+          dfd.reject(err)
+        }
+        dfd.resolve(body)
+      });
+      return dfd.promise;
+    }
+    /**
+     * Gathers the orders that are currently in place for the selected user. Returns a Promise.
+     * @promise
+     * @returns {Promise.<array>} order details
+     */
+    orders(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          "uri": __endpoints.orders
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+        return dfd.promise;
+      }
 
-  _init(_options);
+    quote_data(symbol){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.quotes,
+          qs: {'symbols': symbol.toUpperCase() }
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
 
-  return api;
+    place_order(options){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.orders,
+          form: {
+            account: _private.account,
+            instrument: options.instrument.url,
+            price: options.bid_price,
+            stop_price: options.stop_price,
+            quantity: options.quantity,
+            side: options.transaction,
+            symbol: options.instrument.symbol.toUpperCase(),
+            time_in_force: options.time || 'gfd',
+            trigger: options.trigger || 'immediate',
+            type: options.type || 'market'
+          }
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    place_buy_order(options){
+      options.transaction = 'buy';
+      return place_order(options)
+    }
+
+    place_sell_order(options){
+      options.transaction = 'sell';
+      return place_order(options)
+    }
+
+    investment_profile(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.investment_profile
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    instruments(symbol){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.instruments,
+          qs: {'symbols': symbol.toUpperCase() }
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    dividends(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.dividends
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    notes(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.notes
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+    //DIRECTION: 'up' or 'down'
+    movers(direction){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.movers,
+          qs: {'direction': direction }
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+
+    multiple_quotes(symbols){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      symbols = symbols.map(symbol => symbol.toUpperCase())
+      _request.get({
+          uri: __endpoints.quotes,
+          qs: {'symbols': symbols.join(',') }
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    positions(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+          uri: __endpoints.positions
+        }, (err, httpResponse, body) => {
+          if(err){
+            console.log('err', err)
+            dfd.reject(err)
+          }
+          dfd.resolve(body)
+        });
+      return dfd.promise;
+    }
+
+    accounts(){
+      let dfd = q.defer();
+      let __endpoints = _endpoints.get(this);
+      _request.get({
+        uri: __endpoints.accounts
+      }, (err, httpResponse, body) => {
+        if(err){
+          console.log('err', err)
+          dfd.reject(err)
+        }
+        dfd.resolve(body)
+      });
+      return dfd.promise;
+    }
+
 }
 
 module.exports = RobinhoodWebApi;
